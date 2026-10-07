@@ -88,8 +88,8 @@ with st.sidebar:
     st.markdown(
         f"<div class='small'><b>Risk model:</b> logistic regression, {MODEL.n_train:,} synthetic training rows, "
         f"holdout AUC {MODEL.auc:.2f}.<br><br><b>Decision maker:</b> lending-policy rules + risk model. "
-        "Gemini only explains the result.<br><br>🔒 <b>Privacy:</b> the applicant's name and notes are never sent to Gemini; "
-        "only the computed figures are. Nothing is stored after you close the tab.<br><br>"
+        "Gemini only explains the result.<br><br>🔒 <b>Privacy:</b> the applicant's name is never sent to Gemini; "
+        "only the computed figures and the optional notes are. Nothing is stored after you close the tab.<br><br>"
         "Pre-screening only. Not a credit decision or financial advice.</div>",
         unsafe_allow_html=True,
     )
@@ -181,6 +181,11 @@ with tab1:
         a, rate_ = cur["a"], cur["rate"]
         s, drivers = score_one(a, rate_)
         facts = facts_for_ai(a, s, drivers, rate_)
+        if s.counter_offer:  # only offer a smaller amount to the AI if it actually improves the result
+            s_c, _ = score_one({**a, "loan_amount": s.counter_offer}, rate_)
+            if SEV[s_c.decision] >= SEV[s.decision]:
+                facts["loan"]["counter_offer_rs"] = None
+                facts["loan"]["counter_offer_note"] = "A smaller loan within the 50% FOIR cap would not change the decision."
 
         st.divider()
         st.subheader("② Pre-screening result")
